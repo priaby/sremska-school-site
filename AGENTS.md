@@ -20,7 +20,7 @@ This is the static website for Sremska School, built with Eleventy (11ty).
 
 ### Key Patterns
 - **Image Optimization:** Uses `eleventy-img` via shortcodes (e.g., `thumbnail`).
-- **Bundling:** CSS and JS are bundled using Eleventy bundles output to `dist`.
+- **Bundling:** CSS and JS are bundled using Eleventy bundles output to `dist` within the output directory (i.e., `_site/dist`).
 - **Navigation:** Uses `eleventy-navigation` plugin.
 - **RSS:** Generates Atom feed at `/rss/feed.xml`.
 
