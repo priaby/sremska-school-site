@@ -22,10 +22,9 @@ To gain more control over infrastructure, reduce vendor lock-in, and align with 
 
 ### 1. Container Strategy
 
-Since this is a static site, we will:
-- Use a multi-stage Docker build:
-  1. **Build stage**: Node.js image to run `npm install` and `npm run build`
-  2. **Runtime stage**: Nginx Alpine image to serve the `_site` output
+Since this is a static site, the build step happens **before** Docker image creation (via CI or locally). The Dockerfile simply:
+- Uses `nginx:alpine` for minimal image size
+- Copies the pre-built `_site/` directory to Nginx's html directory
 - This produces a minimal, secure production image (~20-30MB)
 
 ### 2. Kamal Configuration
@@ -99,30 +98,21 @@ KAMAL_REGISTRY_PASSWORD=ghp_your-github-pat-token
 ```dockerfile
 # Dockerfile
 
-# Build stage
-FROM node:20-alpine AS builder
+# Use nginx:alpine for minimal image size
+FROM nginx:alpine
 
-WORKDIR /app
+LABEL service="sremska-school"
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci --only=production=false
+# Copy built site to nginx html directory
+COPY _site/ /usr/share/nginx/html/
 
-# Copy source and build
-COPY . .
-RUN npm run build
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Runtime stage
-FROM nginx:alpine AS runtime
-
-# Copy built static files
-COPY --from=builder /app/_site /usr/share/nginx/html
-
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
+# Expose port 80
 EXPOSE 80
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
@@ -176,6 +166,9 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  VPS_HOST: your-vps-ip-or-hostname
+
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
@@ -187,6 +180,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
 
       - name: Set up Ruby (for Kamal)
         uses: ruby/setup-ruby@v1
@@ -203,14 +207,14 @@ jobs:
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ env.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy with Kamal
         env:
-          KAMAL_REGISTRY_USERNAME: ${{ github.actor }}
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GHCR_TOKEN }}
         run: kamal deploy
 ```
 
@@ -222,7 +226,7 @@ jobs:
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Multi-stage build for Node.js + Nginx |
+| `Dockerfile` | Nginx Alpine serving pre-built `_site/` |
 | `nginx.conf` | Nginx configuration for static site serving |
 | `config/deploy.yml` | Kamal deployment configuration |
 | `.kamal/secrets-example` | Template for local secrets |
@@ -243,9 +247,9 @@ Configure these in GitHub repository settings → Secrets and variables → Acti
 | Secret Name | Description |
 |-------------|-------------|
 | `SSH_PRIVATE_KEY` | SSH private key for VPS access (deploy user) |
-| `VPS_HOST` | IP address or hostname of the VPS |
+| `GHCR_TOKEN` | GitHub Container Registry token (Personal Access Token with `write:packages` scope) |
 
-Note: `GITHUB_TOKEN` is automatically available and used for GitHub Container Registry (ghcr.io) authentication.
+Note: `VPS_HOST` is configured as an environment variable in the workflow file, not as a secret.
 
 ---
 
@@ -258,6 +262,7 @@ Before first deployment, the VPS must be configured:
    adduser deploy
    usermod -aG docker deploy
    ```
+   > **Note:** After running `usermod -aG docker deploy`, the `deploy` user must log out and back in, or run `newgrp docker`, for the group membership change to take effect.
 
 2. **Install Docker**
    ```bash
@@ -315,7 +320,7 @@ kamal app logs
 kamal rollback
 
 # SSH into container
-kamal app exec -i bash
+kamal app exec -i -t bash
 ```
 
 ### GitHub Actions (Automated)
@@ -352,7 +357,7 @@ After implementation, verify:
 
 ## Implementation Checklist
 
-- [ ] Create `Dockerfile` (multi-stage: Node.js build + Nginx runtime)
+- [ ] Create `Dockerfile` (Nginx Alpine serving pre-built `_site/`)
 - [ ] Create `nginx.conf` with optimized static file serving
 - [ ] Create `config/deploy.yml` with Kamal configuration
 - [ ] Create `.kamal/secrets-example` with template
@@ -361,7 +366,8 @@ After implementation, verify:
 - [ ] Test Docker build locally
 - [ ] Prepare VPS (Docker, deploy user, firewall, Let's Encrypt storage)
 - [ ] Configure DNS records
-- [ ] Add GitHub secrets (`SSH_PRIVATE_KEY`, `VPS_HOST`)
+- [ ] Add GitHub secrets (`SSH_PRIVATE_KEY`, `GHCR_TOKEN`)
+- [ ] Configure `VPS_HOST` environment variable in workflow
 - [ ] Run first deployment with `kamal setup`
 - [ ] Verify site accessibility and SSL
 
