@@ -31,7 +31,7 @@ This is the static website for Sremska School, built with Eleventy (11ty).
 ## Code Style
 - **Templates:** Use Nunjucks (`.njk`) for logic and layouts.
 - **Images:** Always use the `thumbnail` shortcode or optimized image handling for media.
-- **Structure:** Keep content logic in frontmatter or `11tydata.js` files.
+- **Structure:** Keep content logic in frontmatter or `.11tydata.js` files.
 
 ## Agents in this repo
 - **planning-agent**: Creates detailed implementation plans and content structures.
