@@ -130,11 +130,19 @@ export default async function (eleventyConfig) {
 
 	eleventyConfig.addPlugin(shortcodePlugin);
 
+	const metadataCache = new Map();
+
 	eleventyConfig.addShortcode(
 		"thumbnail",
 		async function (src, alt, { height = 160 } = {}) {
 			// Get original image dimensions using Sharp
-			const metadata = await sharp(src).metadata();
+			let metadata;
+			if (metadataCache.has(src)) {
+				metadata = metadataCache.get(src);
+			} else {
+				metadata = await sharp(src).metadata();
+				metadataCache.set(src, metadata);
+			}
 			const aspectRatio = metadata.width / metadata.height;
 			const calculatedWidth = Math.round(height * aspectRatio);
 			const filename = path.basename(src);
