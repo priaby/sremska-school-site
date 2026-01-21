@@ -1,6 +1,10 @@
 import { DateTime } from "luxon";
 import metadata from "../_data/metadata.js";
 
+const tagLinkMap = new Map(
+	(metadata.tag_links || []).map((link) => [link.name, link.url]),
+);
+
 export default function (eleventyConfig) {
 	eleventyConfig.addShortcode("year", () => `${new Date().getFullYear()}`);
 	eleventyConfig.addFilter("log", (content) => {
@@ -40,11 +44,8 @@ export default function (eleventyConfig) {
 	});
 
 	eleventyConfig.addFilter("taglink", function (posttag) {
-		const found = (metadata.tag_links || []).find(
-			(link) => link.name === posttag,
-		);
-		if (found) {
-			return found.url;
+		if (tagLinkMap.has(posttag)) {
+			return tagLinkMap.get(posttag);
 		}
 		return posttag; // fallback to raw tag (or slugify if you want)
 	});
