@@ -1,6 +1,8 @@
 import { DateTime } from "luxon";
 import metadata from "../_data/metadata.js";
 
+const imageRegex = /\.(png|jpe?g|webp|avif|gif|svg)$/i;
+
 export default function (eleventyConfig) {
 	eleventyConfig.addShortcode("year", () => `${new Date().getFullYear()}`);
 	eleventyConfig.addFilter("log", (content) => {
@@ -10,9 +12,7 @@ export default function (eleventyConfig) {
 
 	eleventyConfig.addFilter("imagesOnly", (media) => {
 		if (!media) return [];
-		return media.filter((file) =>
-			/\.(png|jpe?g|webp|avif|gif|svg)$/i.test(file),
-		);
+		return media.filter((file) => imageRegex.test(file));
 	});
 
 	eleventyConfig.addFilter("striptags", function (content) {
@@ -23,9 +23,7 @@ export default function (eleventyConfig) {
 	// Filter to get only non-image files
 	eleventyConfig.addFilter("nonImages", (media) => {
 		if (!media) return [];
-		return media.filter(
-			(file) => !/\.(png|jpe?g|webp|avif|gif|svg)$/i.test(file),
-		);
+		return media.filter((file) => !imageRegex.test(file));
 	});
 
 	eleventyConfig.addFilter("removeExtension", (filename) => {

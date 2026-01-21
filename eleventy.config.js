@@ -17,6 +17,8 @@ import shortcodePlugin from "./_config/shortcodes.js";
 
 import markdownItConfig from "./_config/markdown-it.js";
 
+import hyphenatorPlugin from "./_config/hyphenation.js";
+
 import typographer from "./_config/typographer.js";
 
 import taglistForTags from "./_config/proper-tags.js";
@@ -38,6 +40,7 @@ export default async function (eleventyConfig) {
 
 	eleventyConfig.addPlugin(taglistForTags);
 	eleventyConfig.addPlugin(typographer);
+	eleventyConfig.addPlugin(hyphenatorPlugin);
 	eleventyConfig.addPlugin(pluginFilters);
 	eleventyConfig.addPlugin(imageFormat);
 
