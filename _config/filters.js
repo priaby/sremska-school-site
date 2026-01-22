@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import metadata from "../_data/metadata.js";
 
+// This regex is safe to reuse because it does not use the global 'g' flag.
 const imageRegex = /\.(png|jpe?g|webp|avif|gif|svg)$/i;
 const tagLinkMap = new Map(
 	(metadata.tag_links || []).map((link) => [link.name, link.url]),
