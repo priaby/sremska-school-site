@@ -7,8 +7,9 @@ let mediaFiles = [];
 
 if (fs.existsSync(mediaDir)) {
 	mediaFiles = fs
-		.readdirSync(mediaDir)
-		.filter((file) => fs.statSync(path.join(mediaDir, file)).isFile());
+		.readdirSync(mediaDir, { withFileTypes: true })
+		.filter((dirent) => dirent.isFile())
+		.map((dirent) => dirent.name);
 }
 
 export default {
